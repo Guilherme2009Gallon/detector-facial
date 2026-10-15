@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detector facial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Filtro cianótipo: luminância -> azul da Prússia -> papel -->
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <filter id="cyan" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0 0 0 1 0"/>
+    <feComponentTransfer>
+      <feFuncR type="table" tableValues="0.027 0.165 0.918"/>
+      <feFuncG type="table" tableValues="0.102 0.388 0.949"/>
+      <feFuncB type="table" tableValues="0.239 0.784 1"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+
+<div class="shell">
+  <div class="account" id="account" hidden>
+    <span class="me" id="whoAmI"></span>
+    <button class="link" id="btnUsers" type="button" hidden>Usuários</button>
+    <button class="link" id="btnLogout" type="button">Sair</button>
+  </div>
+
+  <header class="bar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 34 34" fill="none" stroke="#eaf2ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11V5a2 2 0 0 1 2-2h6M23 3h6a2 2 0 0 1 2 2v6M31 23v6a2 2 0 0 1-2 2h-6M11 31H5a2 2 0 0 1-2-2v-6"/>
+        <ellipse cx="17" cy="17" rx="6" ry="8" stroke="#ffcf40"/>
+      </svg>
+      <h1>Detector facial</h1>
+    </div>
+    <div class="seg" role="group" aria-label="Cor da imagem">
+      <button type="button" id="segCyan" aria-pressed="true">Cianótipo</button>
+      <button type="button" id="segColor" aria-pressed="false">Cor real</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section aria-label="Visualização">
+      <div class="stage">
+        <div class="frame cyan" id="frame">
+          <video id="video" autoplay playsinline muted hidden></video>
+          <img id="photo" alt="Foto enviada para análise" hidden>
+          <canvas id="overlay"></canvas>
+          <div class="develop" id="develop"></div>
+
+          <div class="hero" id="hero">
+            <svg class="hero-art" viewBox="0 0 400 520" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+              <ellipse cx="200" cy="260" rx="130" ry="180" vector-effect="non-scaling-stroke"/>
+              <path d="M200 30V490M20 195H380M20 270H380M20 335H380" stroke-dasharray="3 6" vector-effect="non-scaling-stroke"/>
+              <ellipse cx="155" cy="195" rx="24" ry="10" vector-effect="non-scaling-stroke"/>
+              <ellipse cx="245" cy="195" rx="24" ry="10" vector-effect="non-scaling-stroke"/>
+              <path d="M200 200L190 270Q200 279 210 270M165 335Q200 357 235 335" vector-effect="non-scaling-stroke"/>
+              <circle cx="200" cy="195" r="3.5" fill="currentColor" stroke="none"/>
+              <circle cx="200" cy="270" r="3.5" fill="currentColor" stroke="none"/>
+              <circle cx="200" cy="335" r="3.5" fill="currentColor" stroke="none"/>
+            </svg>
+            <h2 id="heroTitle">Preparando o modelo.</h2>
+            <p id="heroBody">Na primeira vez pode levar alguns segundos.</p>
+          </div>
+
+          <div class="badges">
+            <span class="badge" id="chip" data-state="loading"><span class="dot"></span><span id="chipText">Carregando</span></span>
+            <span class="badge" id="chipCount" hidden></span>
+            <span class="badge fps" id="fps" hidden></span>
+          </div>
+          <div class="alert" id="alert" role="status" hidden></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn primary" id="btnCam" type="button" disabled>Ligar câmera</button>
+        <label class="btn" id="lblFile">Enviar foto
+          <input type="file" id="file" accept="image/*" disabled>
+        </label>
+        <button class="btn" id="btnShot" type="button" disabled>Capturar quadro</button>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="optMesh" checked> Malha</label>
+          <label class="chip"><input type="checkbox" id="optContours" checked> Contornos</label>
+          <label class="chip"><input type="checkbox" id="optBox" checked> Marcador</label>
+          <label class="chip"><input type="checkbox" id="optPrivacy"> Ocultar rostos</label>
+          <label class="chip"><input type="checkbox" id="optVoice"> Cumprimentar por voz</label>
+        </div>
+      </div>
+
+      <div class="strip-wrap">
+        <div class="strip-head">
+          <h2>Fita de fotos</h2>
+          <span id="stripInfo">Nenhuma foto salva</span>
+          <button class="link" id="btnClear" type="button" hidden>Apagar todas</button>
+        </div>
+        <div class="strip" id="strip"></div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-live="polite">
+      <div class="panel-head">
+        <h2>Leitura</h2>
+        <span class="count" id="count">Sem imagem</span>
+      </div>
+      <div id="faces"></div>
+      <section class="people" aria-label="Pessoas cadastradas">
+        <div class="panel-head">
+          <h2>Pessoas</h2>
+          <span class="count" id="peopleCount">Nenhuma cadastrada</span>
+        </div>
+        <form class="enroll" id="enrollForm" autocomplete="off">
+          <label class="sr-only" for="personName">Nome da pessoa</label>
+          <input type="text" id="personName" maxlength="40" placeholder="Nome da pessoa">
+          <button class="btn" id="btnEnroll" type="submit" disabled>Cadastrar rosto</button>
+        </form>
+        <p class="hint" id="enrollMsg">Carregando o reconhecimento...</p>
+        <ul class="people-list" id="peopleList"></ul>
+        <button class="link danger" id="btnForget" type="button" hidden>Apagar todos os cadastros</button>
+      </section>
+      <section class="presence" aria-label="Registro de presença">
+        <div class="panel-head">
+          <h2>Presença</h2>
+          <span class="count" id="presenceCount">Ninguém ainda</span>
+        </div>
+        <p class="hint" id="presenceHint">Cadastre alguém e ligue a câmera. A entrada e a saída de cada pessoa ficam registradas aqui.</p>
+        <ul class="presence-list" id="presenceList"></ul>
+        <div class="row">
+          <button class="link" id="btnCsv" type="button" hidden>Baixar CSV</button>
+          <button class="link danger" id="btnClearLog" type="button" hidden>Limpar registro</button>
+        </div>
+      </section>
+      <p class="fineprint"><b>Cadastre só quem concordou.</b> O MediaPipe lê o rosto e a expressão, e o reconhecimento compara com as pessoas cadastradas aqui. Os cadastros e a imagem ficam só neste navegador; só os modelos são baixados.</p>
+    </aside>
+  </main>
+</div>
+
+<dialog class="dlg" id="dlgLogin" aria-labelledby="loginTitle">
+  <form id="loginForm" novalidate>
+    <h2 id="loginTitle">Entrar</h2>
+    <p id="loginLead">Use seu usuário e senha para abrir o detector.</p>
+    <div id="setupFields" hidden>
+      <label for="setupNome">Seu nome</label>
+      <input id="setupNome" type="text" maxlength="40" autocomplete="name">
+    </div>
+    <label for="loginUser">Usuário</label>
+    <input id="loginUser" type="text" maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <label for="loginPass">Senha</label>
+    <input id="loginPass" type="password" maxlength="200" autocomplete="current-password">
+    <p class="form-error" id="loginError" role="alert" hidden></p>
+    <button class="btn primary" id="loginBtn" type="submit">Entrar</button>
+  </form>
+  <div id="loginOffline" hidden>
+    <h2>Servidor não encontrado</h2>
+    <p>O detector guarda os dados no arquivo banco.json e precisa do servidor para isso. Abra um terminal na pasta do projeto e rode:</p>
+    <pre><code>python servidor.py</code></pre>
+    <p>No Windows também dá para dar dois cliques em iniciar.bat. Depois acesse http://localhost:8000.</p>
+    <button class="btn" id="btnRetry" type="button">Tentar de novo</button>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="dlgUsers" aria-labelledby="usersTitle">
+  <div class="dlg-head">
+    <h2 id="usersTitle">Usuários</h2>
+    <button class="link" id="usersClose" type="button">Fechar</button>
+  </div>
+  <ul class="users-list" id="usersList"></ul>
+  <form id="userForm" autocomplete="off" novalidate>
+    <h3>Novo usuário</h3>
+    <label for="newNome">Nome</label>
+    <input id="newNome" type="text" maxlength="40">
+    <label for="newUser">Usuário (letras minúsculas e números)</label>
+    <input id="newUser" type="text" maxlength="30" autocapitalize="none" spellcheck="false">
+    <label for="newPass">Senha (mínimo 6 caracteres)</label>
+    <input id="newPass" type="password" maxlength="200" autocomplete="new-password">
+    <label for="newRole">Tipo de conta</label>
+    <select id="newRole">
+      <option value="usuario">Usuário</option>
+      <option value="admin">Administrador</option>
+    </select>
+    <p class="form-error" id="userError" role="alert" hidden></p>
+    <button class="btn primary" type="submit">Criar usuário</button>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.js"></script>
+<script src="app.js"></script>
+<script>
+  /* Se o app.js não iniciar (arquivo ausente ou bloqueado), avisa em vez de ficar parado em "Preparando o modelo" */
+  setTimeout(function () {
+    if (window.__appStarted) return;
+    var t = document.getElementById("heroTitle"), b = document.getElementById("heroBody");
+    if (t) t.textContent = "O site não iniciou.";
+    if (b) b.textContent = "O app.js não carregou. Confira se index.html, style.css e app.js estão na mesma pasta e se há internet. Veja detalhes no console (F12).";
+  }, 10000);
+</script>
+</body>
+</html>

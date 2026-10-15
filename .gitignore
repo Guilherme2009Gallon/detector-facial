@@ -1,0 +1,6 @@
+# Dados do sistema: rostos, senhas e fotos. Não suba para o GitHub.
+banco.json
+banco.json.tmp
+banco.json.corrompido-*
+fotos/
+__pycache__/
